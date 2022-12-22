@@ -57,7 +57,7 @@ func main() {
 
 	// Temporary flag checks
 	if !live && !refresh && !offline {
-		fmt.Fprintln(os.Stderr, "[-] plis enable live flag as it will not work any other way for now")
+		fmt.Fprintln(os.Stderr, "[-] no mode enabled, check help for more")
 		os.Exit(0)
 	}
 
