@@ -2,6 +2,7 @@ package torips
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"os"
 )
@@ -18,6 +19,7 @@ func IPinList(ip net.IP) (found bool) {
 	for scanner.Scan() {
 		found = (net.ParseIP(scanner.Text()).Equal(ip))
 		if found {
+			fmt.Println("Found Tor IP address")
 			return
 		}
 	}

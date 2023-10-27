@@ -9,13 +9,13 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	nc "github.com/varuuntiwari/catch-tor/netcheck"
 	"github.com/varuuntiwari/catch-tor/torips"
 )
 
 // Flag variables
 var (
 	live    bool
-	silent  bool
 	refresh bool
 	offline bool
 	dev     string
@@ -48,7 +48,6 @@ func main() {
 	}
 
 	flag.BoolVar(&live, "live", false, "capture packets live from interface")
-	flag.BoolVar(&silent, "silent", false, "disable the dots that prove it does work")
 	flag.BoolVar(&refresh, "refresh", false, "fetch and store the latest list of Tor IPs")
 	flag.StringVar(&dev, "d", "", "specify interface to capture on if live mode enabled")
 	flag.BoolVar(&offline, "offline", false, "read packets from pcap file")
@@ -80,18 +79,10 @@ func main() {
 
 	// Verify interface for live capture
 	if live {
-		devs, _ := pcap.FindAllDevs()
-		flag := false
-		for _, i := range devs {
-			if i.Name == dev {
-				fmt.Printf("[+] %v interface found\n", dev)
-				scan = true
-				flag = true
-				break
-			}
-		}
-		if !flag {
-			fmt.Fprintln(os.Stderr, "[-] network interface not found")
+		exists := false
+		dev, exists = nc.VerifyInterface(dev)
+		if !exists {
+			fmt.Fprintln(os.Stderr, "[-] invalid interface specified")
 			os.Exit(1)
 		}
 	}
@@ -103,27 +94,17 @@ func main() {
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		fmt.Println("Exiting..")
+		fmt.Println("Exiting...")
 		os.Exit(2)
 	}
 	defer h.Close()
 
 	fmt.Println("[+] scanning packets now")
-	count := 0
 	source := gopacket.NewPacketSource(h, h.LinkType())
 	for p := range source.Packets() {
 		ipLayer := p.Layer(layers.LayerTypeIPv4)
 		if ipLayer != nil {
 			ip, _ := ipLayer.(*layers.IPv4)
-			if !silent {
-				if count == 50 {
-					count = 0
-					fmt.Println()
-				} else {
-					count++
-					fmt.Print(".")
-				}
-			}
 			if torips.IPinList(ip.DstIP) {
 				fmt.Printf("\n[+] tor connection found from %v, connecting to %v\n", ip.SrcIP, ip.DstIP)
 			}

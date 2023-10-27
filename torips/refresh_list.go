@@ -1,63 +1,31 @@
 package torips
 
 import (
-	"fmt"
 	"io"
+	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 )
 
-// This file and its functions are coded by ChatGPT.
+// Set the GitHub repository URL and file path
+var (
+	re = "https://raw.githubusercontent.com/SecOps-Institute/Tor-IP-Addresses/master/tor-nodes.lst"
+)
 
+// RefreshList fetches the latest list of Tor IP addresses from the GitHub repository.
 func RefreshList() (size int64) {
-	// Set the GitHub repository URL and file path
-	repoURL := "https://github.com/SecOps-Institute/Tor-IP-Addresses"
-	fileName := "tor-nodes.lst"
-
-	// Clone the repository to a temporary directory
-	tempDir, err := cloneRepo(repoURL)
-	if err != nil {
-		fmt.Printf("Error cloning repository: %s\n", err)
-		os.Exit(1)
-	}
-	defer os.RemoveAll(tempDir) // Clean up the temporary directory when we're done
-
-	// Open the file for reading
-	file, err := os.Open(filepath.Join(tempDir, fileName))
-	if err != nil {
-		fmt.Printf("Error opening file: %s\n", err)
-		os.Exit(1)
-	}
-	defer file.Close() // Close the file when we're done
-
-	// Copy the file to standard output
-	f, err := os.Create(fileName)
-	if err != nil {
-		panic(err.Error())
-	}
-	size, err = io.Copy(f, file)
-	if err != nil {
-		fmt.Printf("Error copying file: %s\n", err)
-		os.Exit(1)
+	// Create the file
+	file, err := os.Create(filename)
+	size = 0
+	if err == nil {
+		defer file.Close()
+		resp, err := http.Get(re)
+		if err == nil {
+			b, err := io.Copy(file, resp.Body)
+			if err == nil {
+				size = b
+			}
+			defer resp.Body.Close()
+		}
 	}
 	return
-}
-
-func cloneRepo(repoURL string) (string, error) {
-	// Create a temporary directory to store the repository
-	tempDir, err := filepath.Abs(os.TempDir())
-	if err != nil {
-		return "", err
-	}
-	tempDir = filepath.Join(tempDir, "repo")
-
-	// Clone the repository
-	cmd := exec.Command("git", "clone", repoURL, tempDir)
-	err = cmd.Run()
-	if err != nil {
-		return "", err
-	}
-
-	return tempDir, nil
 }
